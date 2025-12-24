@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
-import { Search, DollarSign, Package, AlertTriangle, Download } from "lucide-react"; // Added Download icon
+import { Search, DollarSign, Package, AlertTriangle, Download } from "lucide-react";
 import DashboardLayout from "./layout/DashboardLayout";
 import InventoryTable from "./components/InventoryTable";
 import AddProductModal from "./components/AddProductModal";
 import StatsCard from "./components/StatsCard";
+import InventoryChart from "./components/InventoryChart"; // 1. IMPORT CHART
 import { initialInventory } from "./data/mockData";
 
 function App() {
@@ -27,20 +28,12 @@ function App() {
   const lowStockCount = products.filter(p => p.stock < 10).length;
   const totalProducts = products.length;
 
-  // --- NEW: EXPORT TO CSV LOGIC ---
   const handleExport = () => {
-    // 1. Define the headers
     const headers = ["ID,Name,SKU,Category,Price,Stock,Status"];
-    
-    // 2. Format the data (add quotes around names to handle commas)
     const rows = products.map(p => 
       `${p.id},"${p.name}",${p.sku},${p.category},${p.price},${p.stock},${p.status}`
     );
-
-    // 3. Combine headers and rows
     const csvContent = "data:text/csv;charset=utf-8," + [headers, ...rows].join("\n");
-    
-    // 4. Create a fake download link and click it
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
@@ -49,7 +42,6 @@ function App() {
     link.click();
     document.body.removeChild(link);
   };
-  // --------------------------------
 
   const handleSaveProduct = (product) => {
     if (productToEdit) {
@@ -112,10 +104,11 @@ function App() {
           />
         </div>
 
+        {/* 2. THE CHART */}
+        <InventoryChart products={products} />
+
         {/* CONTROLS ROW */}
         <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-           
-           {/* Search Input */}
            <div className="relative group w-full md:w-96">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={20} />
               <input
@@ -127,9 +120,7 @@ function App() {
               />
             </div>
 
-            {/* ACTION BUTTONS */}
             <div className="flex gap-3 w-full md:w-auto">
-              {/* Export Button */}
               <button
                 onClick={handleExport}
                 className="flex-1 md:flex-none border border-slate-300 text-slate-700 hover:bg-slate-50 px-4 py-2.5 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2"
@@ -138,7 +129,6 @@ function App() {
                 Export CSV
               </button>
 
-              {/* Add Button */}
               <button
                 onClick={handleAddClick}
                 className="flex-1 md:flex-none bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2"
