@@ -1,7 +1,52 @@
-import { Edit, Trash2, AlertCircle, CheckCircle2, XCircle, Package, PlusCircle, MinusCircle } from 'lucide-react';
+import { useState } from 'react';
+import { Edit, Trash2, AlertCircle, CheckCircle2, XCircle, Package, PlusCircle, MinusCircle, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 
-const InventoryTable = ({ products, onDelete, onEdit, onAdjust }) => { // Added onAdjust prop
-  
+const InventoryTable = ({ products, onDelete, onEdit, onAdjust }) => {
+  // 1. SORTING STATE
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
+
+  // 2. SORTING LOGIC
+  const sortedProducts = [...products].sort((a, b) => {
+    if (!sortConfig.key) return 0;
+
+    let aValue = a[sortConfig.key];
+    let bValue = b[sortConfig.key];
+
+    // Handle numbers (Price/Stock) correctly so 10 comes after 2, not before
+    if (sortConfig.key === 'price' || sortConfig.key === 'stock') {
+      aValue = parseFloat(aValue);
+      bValue = parseFloat(bValue);
+    } else {
+      // Case insensitive string sort
+      aValue = String(aValue).toLowerCase();
+      bValue = String(bValue).toLowerCase();
+    }
+
+    if (aValue < bValue) {
+      return sortConfig.direction === 'asc' ? -1 : 1;
+    }
+    if (aValue > bValue) {
+      return sortConfig.direction === 'asc' ? 1 : -1;
+    }
+    return 0;
+  });
+
+  const requestSort = (key) => {
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  // Helper to show the correct arrow icon
+  const getSortIcon = (columnName) => {
+    if (sortConfig.key !== columnName) return <ArrowUpDown size={14} className="text-slate-300" />;
+    return sortConfig.direction === 'asc' 
+      ? <ArrowUp size={14} className="text-blue-600" /> 
+      : <ArrowDown size={14} className="text-blue-600" />;
+  };
+
   const getStatusColor = (status) => {
     switch(status.toLowerCase()) {
       case 'in stock': return 'bg-emerald-100 text-emerald-700';
@@ -25,18 +70,54 @@ const InventoryTable = ({ products, onDelete, onEdit, onAdjust }) => { // Added 
       <table className="w-full text-left border-collapse table-fixed">
         <thead className="bg-slate-50 border-b border-slate-200">
           <tr>
-            <th className="w-1/3 px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Product Name</th>
-            <th className="w-32 px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">SKU</th>
-            <th className="w-32 px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Category</th>
-            <th className="w-24 px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Price</th>
-            <th className="w-24 px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Stock</th>
-            <th className="w-40 px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
+            <th 
+              onClick={() => requestSort('name')} 
+              className="w-1/3 px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer hover:bg-slate-100 transition-colors select-none"
+            >
+              <div className="flex items-center gap-2">Product Name {getSortIcon('name')}</div>
+            </th>
+            
+            <th 
+              onClick={() => requestSort('sku')} 
+              className="w-32 px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer hover:bg-slate-100 transition-colors select-none"
+            >
+              <div className="flex items-center gap-2">SKU {getSortIcon('sku')}</div>
+            </th>
+
+            <th 
+              onClick={() => requestSort('category')} 
+              className="w-32 px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer hover:bg-slate-100 transition-colors select-none"
+            >
+              <div className="flex items-center gap-2">Category {getSortIcon('category')}</div>
+            </th>
+
+            <th 
+              onClick={() => requestSort('price')} 
+              className="w-24 px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer hover:bg-slate-100 transition-colors select-none"
+            >
+              <div className="flex items-center gap-2">Price {getSortIcon('price')}</div>
+            </th>
+
+            <th 
+              onClick={() => requestSort('stock')} 
+              className="w-24 px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer hover:bg-slate-100 transition-colors select-none"
+            >
+              <div className="flex items-center gap-2">Stock {getSortIcon('stock')}</div>
+            </th>
+
+            <th 
+              onClick={() => requestSort('status')} 
+              className="w-40 px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer hover:bg-slate-100 transition-colors select-none"
+            >
+              <div className="flex items-center gap-2">Status {getSortIcon('status')}</div>
+            </th>
+
             <th className="w-40 px-6 py-4 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100">
-          {products.length > 0 ? (
-            products.map((product) => (
+          {sortedProducts.length > 0 ? (
+            sortedProducts.map((product) => (
               <tr key={product.id} className="hover:bg-slate-50 transition-colors">
                 
                 <td className="px-6 py-4">
@@ -77,7 +158,6 @@ const InventoryTable = ({ products, onDelete, onEdit, onAdjust }) => { // Added 
 
                 <td className="px-6 py-4 text-right">
                   <div className="flex justify-end gap-2">
-                    {/* 1. NEW STOCK ACTIONS */}
                     <button 
                       onClick={() => onAdjust(product, 'add')}
                       className="text-emerald-600 hover:bg-emerald-50 p-1.5 rounded transition-colors"
@@ -95,7 +175,6 @@ const InventoryTable = ({ products, onDelete, onEdit, onAdjust }) => { // Added 
                     
                     <div className="w-px h-6 bg-slate-200 mx-1"></div>
 
-                    {/* EXISTING EDIT/DELETE ACTIONS */}
                     <button 
                       onClick={() => onEdit(product)}
                       className="text-slate-400 hover:text-blue-600 hover:bg-blue-50 p-1.5 rounded transition-colors"
