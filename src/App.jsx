@@ -10,7 +10,8 @@ import ActivityLog from "./components/ActivityLog";
 import BarcodeScanner from "./components/BarcodeScanner";
 import LoginScreen from "./components/LoginScreen";
 import LabelModal from "./components/LabelModal";
-import AdjustStockModal from "./components/AdjustStockModal"; // 1. IMPORT
+import AdjustStockModal from "./components/AdjustStockModal";
+import ThemeToggle from "./components/ThemeToggle";
 import { initialInventory } from "./data/mockData";
 
 function App() {
@@ -34,10 +35,9 @@ function App() {
   const [isLabelModalOpen, setIsLabelModalOpen] = useState(false);
   const [productToEdit, setProductToEdit] = useState(null);
   
-  // 2. NEW STATE FOR ADJUSTMENT
   const [adjustModalOpen, setAdjustModalOpen] = useState(false);
   const [adjustProduct, setAdjustProduct] = useState(null);
-  const [adjustType, setAdjustType] = useState('add'); // 'add' or 'subtract'
+  const [adjustType, setAdjustType] = useState('add'); 
 
   useEffect(() => {
     localStorage.setItem("inventory_data", JSON.stringify(products));
@@ -65,27 +65,23 @@ function App() {
     setActivities([newLog, ...activities]);
   };
 
-  // 3. LOGIC FOR OPENING ADJUST MODAL
   const handleAdjustClick = (product, type) => {
     setAdjustProduct(product);
     setAdjustType(type);
     setAdjustModalOpen(true);
   };
 
-  // 4. LOGIC FOR SAVING STOCK ADJUSTMENT
   const handleStockAdjustment = (amount, type, reason) => {
     if (!adjustProduct) return;
 
     const newStock = type === 'add' 
       ? parseInt(adjustProduct.stock) + amount
-      : Math.max(0, parseInt(adjustProduct.stock) - amount); // Prevent negative stock
+      : Math.max(0, parseInt(adjustProduct.stock) - amount); 
 
-    // Determine Status based on new stock
     let newStatus = 'In Stock';
     if (newStock === 0) newStatus = 'Out of Stock';
     else if (newStock < 10) newStatus = 'Low Stock';
 
-    // Update Product List
     const updatedProducts = products.map(p => 
       p.id === adjustProduct.id 
         ? { ...p, stock: newStock, status: newStatus } 
@@ -94,11 +90,10 @@ function App() {
     
     setProducts(updatedProducts);
     
-    // Log Activity
     const actionWord = type === 'add' ? 'Restocked' : 'Issued';
     const reasonText = reason ? `(${reason})` : '';
     addToHistory(
-      type === 'add' ? 'add' : 'delete', // Reusing icon types
+      type === 'add' ? 'add' : 'delete',
       `${actionWord} ${amount} units of ${adjustProduct.name} ${reasonText}`
     );
 
@@ -182,121 +177,127 @@ function App() {
   }
 
   return (
-    <DashboardLayout>
-      <Toaster position="top-right" />
-      
-      <BarcodeScanner 
-        isOpen={isScannerOpen} 
-        onClose={() => setIsScannerOpen(false)} 
-        onScan={handleScan} 
-      />
-
-      <LabelModal 
-        isOpen={isLabelModalOpen}
-        onClose={() => setIsLabelModalOpen(false)}
-        products={filteredProducts} 
-      />
-
-      {/* 5. ADD THE ADJUST MODAL */}
-      <AdjustStockModal
-        isOpen={adjustModalOpen}
-        onClose={() => setAdjustModalOpen(false)}
-        onConfirm={handleStockAdjustment}
-        product={adjustProduct}
-        type={adjustType}
-      />
-
-      <div className="space-y-6">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 transition-colors duration-200">
+      <DashboardLayout>
+        <Toaster position="top-right" />
         
-        <div className="flex justify-between items-start">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-800">Inventory Dashboard</h1>
-            <p className="text-slate-500">Overview of your current stock and value.</p>
-          </div>
-          <button 
-            onClick={handleLogout}
-            className="flex items-center gap-2 text-slate-500 hover:text-red-600 transition-colors px-3 py-2 rounded-lg hover:bg-red-50"
-          >
-            <LogOut size={18} />
-            <span className="font-medium">Logout</span>
-          </button>
-        </div>
+        <BarcodeScanner 
+          isOpen={isScannerOpen} 
+          onClose={() => setIsScannerOpen(false)} 
+          onScan={handleScan} 
+        />
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <StatsCard title="Total Inventory Value" value={`$${totalValue.toLocaleString()}`} icon={DollarSign} color="bg-blue-500" />
-          <StatsCard title="Total Products" value={totalProducts} icon={Package} color="bg-purple-500" />
-          <StatsCard title="Low Stock Alerts" value={lowStockCount} icon={AlertTriangle} color={lowStockCount > 0 ? "bg-amber-500" : "bg-emerald-500"} />
-        </div>
+        <LabelModal 
+          isOpen={isLabelModalOpen}
+          onClose={() => setIsLabelModalOpen(false)}
+          products={filteredProducts} 
+        />
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            <InventoryChart products={products} />
-          </div>
-          <div className="lg:col-span-1">
-            <ActivityLog activities={activities} />
-          </div>
-        </div>
+        <AdjustStockModal
+          isOpen={adjustModalOpen}
+          onClose={() => setAdjustModalOpen(false)}
+          onConfirm={handleStockAdjustment}
+          product={adjustProduct}
+          type={adjustType}
+        />
 
-        <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-           
-           <div className="relative group w-full md:w-96 flex gap-2">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={20} />
-                <input
-                  type="text"
-                  placeholder="Search by name or SKU..."
-                  className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-              <button 
-                onClick={() => setIsScannerOpen(true)}
-                className="bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 rounded-lg border border-slate-200 transition-colors"
-                title="Scan Barcode"
-              >
-                <ScanLine size={20} />
-              </button>
+        <div className="space-y-6">
+          
+          <div className="flex justify-between items-start">
+            <div>
+              <h1 className="text-2xl font-bold text-slate-800 dark:text-white">Inventory Dashboard</h1>
+              <p className="text-slate-500 dark:text-slate-400">Overview of your current stock and value.</p>
             </div>
-
-            <div className="flex gap-3 w-full md:w-auto">
-              <button
-                onClick={() => setIsLabelModalOpen(true)}
-                className="flex-1 md:flex-none border border-slate-300 text-slate-700 hover:bg-slate-50 px-4 py-2.5 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2"
-              >
-                <QrCode size={18} />
-                Labels
-              </button>
-
-              <button onClick={handleExport} className="flex-1 md:flex-none border border-slate-300 text-slate-700 hover:bg-slate-50 px-4 py-2.5 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2">
-                <Download size={18} />
-                Export CSV
-              </button>
+            
+            <div className="flex gap-4">
+              <ThemeToggle />
               
-              <button onClick={handleAddClick} className="flex-1 md:flex-none bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2">
-                + Add Product
+              <button 
+                onClick={handleLogout}
+                className="flex items-center gap-2 text-slate-500 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400 transition-colors px-3 py-2 rounded-lg hover:bg-red-50 dark:hover:bg-slate-800"
+              >
+                <LogOut size={18} />
+                <span className="font-medium">Logout</span>
               </button>
             </div>
-        </div>
+          </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-          <InventoryTable 
-            products={filteredProducts} 
-            onDelete={handleDeleteProduct} 
-            onEdit={handleEditClick} 
-            onAdjust={handleAdjustClick} // Pass the handler
-          />
-        </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <StatsCard title="Total Inventory Value" value={`$${totalValue.toLocaleString()}`} icon={DollarSign} color="bg-blue-500" />
+            <StatsCard title="Total Products" value={totalProducts} icon={Package} color="bg-purple-500" />
+            <StatsCard title="Low Stock Alerts" value={lowStockCount} icon={AlertTriangle} color={lowStockCount > 0 ? "bg-amber-500" : "bg-emerald-500"} />
+          </div>
 
-        {isModalOpen && (
-          <AddProductModal
-            onClose={() => setIsModalOpen(false)}
-            onSave={handleSaveProduct}
-            productToEdit={productToEdit}
-          />
-        )}
-      </div>
-    </DashboardLayout>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2">
+              <InventoryChart products={products} />
+            </div>
+            <div className="lg:col-span-1">
+              <ActivityLog activities={activities} />
+            </div>
+          </div>
+
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+             
+             <div className="relative group w-full md:w-96 flex gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={20} />
+                  <input
+                    type="text"
+                    placeholder="Search by name or SKU..."
+                    className="w-full pl-10 pr-4 py-2 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+                <button 
+                  onClick={() => setIsScannerOpen(true)}
+                  className="bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 px-3 rounded-lg border border-slate-200 dark:border-slate-600 transition-colors"
+                  title="Scan Barcode"
+                >
+                  <ScanLine size={20} />
+                </button>
+              </div>
+
+              <div className="flex gap-3 w-full md:w-auto">
+                <button
+                  onClick={() => setIsLabelModalOpen(true)}
+                  className="flex-1 md:flex-none border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 px-4 py-2.5 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2"
+                >
+                  <QrCode size={18} />
+                  Labels
+                </button>
+
+                <button onClick={handleExport} className="flex-1 md:flex-none border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 px-4 py-2.5 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2">
+                  <Download size={18} />
+                  Export CSV
+                </button>
+                
+                <button onClick={handleAddClick} className="flex-1 md:flex-none bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2">
+                  + Add Product
+                </button>
+              </div>
+          </div>
+
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+            <InventoryTable 
+              products={filteredProducts} 
+              onDelete={handleDeleteProduct} 
+              onEdit={handleEditClick} 
+              onAdjust={handleAdjustClick} 
+            />
+          </div>
+
+          {isModalOpen && (
+            <AddProductModal
+              onClose={() => setIsModalOpen(false)}
+              onSave={handleSaveProduct}
+              productToEdit={productToEdit}
+            />
+          )}
+        </div>
+      </DashboardLayout>
+    </div>
   );
 }
 
