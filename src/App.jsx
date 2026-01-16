@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, DollarSign, Package, AlertTriangle, Download, ScanLine, LogOut, QrCode } from "lucide-react"; // Added QrCode Icon
+import { Search, DollarSign, Package, AlertTriangle, Download, ScanLine, LogOut, QrCode } from "lucide-react";
 import toast, { Toaster } from 'react-hot-toast';
 import DashboardLayout from "./layout/DashboardLayout";
 import InventoryTable from "./components/InventoryTable";
@@ -9,7 +9,8 @@ import InventoryChart from "./components/InventoryChart";
 import ActivityLog from "./components/ActivityLog";
 import BarcodeScanner from "./components/BarcodeScanner";
 import LoginScreen from "./components/LoginScreen";
-import LabelModal from "./components/LabelModal"; // 1. Import Label Modal
+import LabelModal from "./components/LabelModal";
+import AdjustStockModal from "./components/AdjustStockModal"; // 1. IMPORT
 import { initialInventory } from "./data/mockData";
 
 function App() {
@@ -30,8 +31,13 @@ function App() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
-  const [isLabelModalOpen, setIsLabelModalOpen] = useState(false); // 2. Label Modal State
+  const [isLabelModalOpen, setIsLabelModalOpen] = useState(false);
   const [productToEdit, setProductToEdit] = useState(null);
+  
+  // 2. NEW STATE FOR ADJUSTMENT
+  const [adjustModalOpen, setAdjustModalOpen] = useState(false);
+  const [adjustProduct, setAdjustProduct] = useState(null);
+  const [adjustType, setAdjustType] = useState('add'); // 'add' or 'subtract'
 
   useEffect(() => {
     localStorage.setItem("inventory_data", JSON.stringify(products));
@@ -57,6 +63,46 @@ function App() {
       timestamp: new Date().toLocaleString()
     };
     setActivities([newLog, ...activities]);
+  };
+
+  // 3. LOGIC FOR OPENING ADJUST MODAL
+  const handleAdjustClick = (product, type) => {
+    setAdjustProduct(product);
+    setAdjustType(type);
+    setAdjustModalOpen(true);
+  };
+
+  // 4. LOGIC FOR SAVING STOCK ADJUSTMENT
+  const handleStockAdjustment = (amount, type, reason) => {
+    if (!adjustProduct) return;
+
+    const newStock = type === 'add' 
+      ? parseInt(adjustProduct.stock) + amount
+      : Math.max(0, parseInt(adjustProduct.stock) - amount); // Prevent negative stock
+
+    // Determine Status based on new stock
+    let newStatus = 'In Stock';
+    if (newStock === 0) newStatus = 'Out of Stock';
+    else if (newStock < 10) newStatus = 'Low Stock';
+
+    // Update Product List
+    const updatedProducts = products.map(p => 
+      p.id === adjustProduct.id 
+        ? { ...p, stock: newStock, status: newStatus } 
+        : p
+    );
+    
+    setProducts(updatedProducts);
+    
+    // Log Activity
+    const actionWord = type === 'add' ? 'Restocked' : 'Issued';
+    const reasonText = reason ? `(${reason})` : '';
+    addToHistory(
+      type === 'add' ? 'add' : 'delete', // Reusing icon types
+      `${actionWord} ${amount} units of ${adjustProduct.name} ${reasonText}`
+    );
+
+    toast.success(`Stock updated: ${newStock} units`);
   };
 
   const totalValue = products.reduce((acc, product) => {
@@ -145,11 +191,19 @@ function App() {
         onScan={handleScan} 
       />
 
-      {/* 3. The Label Modal */}
       <LabelModal 
         isOpen={isLabelModalOpen}
         onClose={() => setIsLabelModalOpen(false)}
-        products={filteredProducts} // Note: It prints whatever you have filtered!
+        products={filteredProducts} 
+      />
+
+      {/* 5. ADD THE ADJUST MODAL */}
+      <AdjustStockModal
+        isOpen={adjustModalOpen}
+        onClose={() => setAdjustModalOpen(false)}
+        onConfirm={handleStockAdjustment}
+        product={adjustProduct}
+        type={adjustType}
       />
 
       <div className="space-y-6">
@@ -206,7 +260,6 @@ function App() {
             </div>
 
             <div className="flex gap-3 w-full md:w-auto">
-              {/* 4. NEW BUTTON: Print Labels */}
               <button
                 onClick={() => setIsLabelModalOpen(true)}
                 className="flex-1 md:flex-none border border-slate-300 text-slate-700 hover:bg-slate-50 px-4 py-2.5 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2"
@@ -227,7 +280,12 @@ function App() {
         </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-          <InventoryTable products={filteredProducts} onDelete={handleDeleteProduct} onEdit={handleEditClick} />
+          <InventoryTable 
+            products={filteredProducts} 
+            onDelete={handleDeleteProduct} 
+            onEdit={handleEditClick} 
+            onAdjust={handleAdjustClick} // Pass the handler
+          />
         </div>
 
         {isModalOpen && (
