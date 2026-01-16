@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, DollarSign, Package, AlertTriangle, Download, ScanLine, LogOut } from "lucide-react"; // Added LogOut
+import { Search, DollarSign, Package, AlertTriangle, Download, ScanLine, LogOut, QrCode } from "lucide-react"; // Added QrCode Icon
 import toast, { Toaster } from 'react-hot-toast';
 import DashboardLayout from "./layout/DashboardLayout";
 import InventoryTable from "./components/InventoryTable";
@@ -8,11 +8,11 @@ import StatsCard from "./components/StatsCard";
 import InventoryChart from "./components/InventoryChart";
 import ActivityLog from "./components/ActivityLog";
 import BarcodeScanner from "./components/BarcodeScanner";
-import LoginScreen from "./components/LoginScreen"; // 1. Import Login
+import LoginScreen from "./components/LoginScreen";
+import LabelModal from "./components/LabelModal"; // 1. Import Label Modal
 import { initialInventory } from "./data/mockData";
 
 function App() {
-  // 2. AUTH STATE (Check localStorage first)
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     return localStorage.getItem("inventory_auth") === "true";
   });
@@ -30,6 +30,7 @@ function App() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [isLabelModalOpen, setIsLabelModalOpen] = useState(false); // 2. Label Modal State
   const [productToEdit, setProductToEdit] = useState(null);
 
   useEffect(() => {
@@ -37,13 +38,11 @@ function App() {
     localStorage.setItem("inventory_activities", JSON.stringify(activities));
   }, [products, activities]);
 
-  // 3. Handle Login
   const handleLogin = (status) => {
     setIsAuthenticated(status);
-    localStorage.setItem("inventory_auth", status); // Save login session
+    localStorage.setItem("inventory_auth", status);
   };
 
-  // 4. Handle Logout
   const handleLogout = () => {
     setIsAuthenticated(false);
     localStorage.removeItem("inventory_auth");
@@ -127,7 +126,6 @@ function App() {
       product.sku.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
-  // 5. THE GATEKEEPER
   if (!isAuthenticated) {
     return (
       <>
@@ -147,9 +145,15 @@ function App() {
         onScan={handleScan} 
       />
 
+      {/* 3. The Label Modal */}
+      <LabelModal 
+        isOpen={isLabelModalOpen}
+        onClose={() => setIsLabelModalOpen(false)}
+        products={filteredProducts} // Note: It prints whatever you have filtered!
+      />
+
       <div className="space-y-6">
         
-        {/* Header with Logout Button */}
         <div className="flex justify-between items-start">
           <div>
             <h1 className="text-2xl font-bold text-slate-800">Inventory Dashboard</h1>
@@ -202,10 +206,20 @@ function App() {
             </div>
 
             <div className="flex gap-3 w-full md:w-auto">
+              {/* 4. NEW BUTTON: Print Labels */}
+              <button
+                onClick={() => setIsLabelModalOpen(true)}
+                className="flex-1 md:flex-none border border-slate-300 text-slate-700 hover:bg-slate-50 px-4 py-2.5 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2"
+              >
+                <QrCode size={18} />
+                Labels
+              </button>
+
               <button onClick={handleExport} className="flex-1 md:flex-none border border-slate-300 text-slate-700 hover:bg-slate-50 px-4 py-2.5 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2">
                 <Download size={18} />
                 Export CSV
               </button>
+              
               <button onClick={handleAddClick} className="flex-1 md:flex-none bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2">
                 + Add Product
               </button>

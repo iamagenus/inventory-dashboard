@@ -10,3 +10,32 @@ html, body, #root {
   padding: 0;
   overflow-x: hidden; /* Prevents side-scrolling */
 }
+/* ... existing code ... */
+
+@media print {
+  /* Hide everything by default */
+  body * {
+    visibility: hidden;
+  }
+
+  /* Only show the print area */
+  #printable-area, #printable-area * {
+    visibility: visible;
+  }
+
+  /* Position the print area at the top left */
+  #printable-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 20px;
+    background: white;
+  }
+
+  /* Hide the modal overlay/background */
+  .modal-overlay {
+    background: white !important;
+  }
+}
