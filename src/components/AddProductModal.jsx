@@ -1,35 +1,29 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { X } from "lucide-react";
 
-const AddProductModal = ({ isOpen, onClose, onSave, productToEdit }) => {
-  if (!isOpen) return null;
+const CATEGORIES = [
+  "Engine Parts",
+  "Hydraulics",
+  "Body & Frame",
+  "Electrical",
+  "Suspension",
+  "Accessories",
+];
 
-  // Form State
-  const [formData, setFormData] = useState({
-    name: "",
-    sku: "",
-    category: "Electronics",
-    price: "",
-    stock: "",
-    status: "In Stock",
-  });
-
-  // 1. MAGIC: When the modal opens, check if we are editing
-  useEffect(() => {
-    if (productToEdit) {
-      setFormData(productToEdit); // Fill form with existing data
-    } else {
-      // Reset form for "Add New"
-      setFormData({
-        name: "",
-        sku: "",
-        category: "Electronics",
-        price: "",
-        stock: "",
-        status: "In Stock",
-      });
-    }
-  }, [productToEdit, isOpen]); // Run this whenever these change
+// REMOVED 'isOpen' from here 👇
+const AddProductModal = ({ onClose, onSave, productToEdit }) => {
+  // Initialize form with either existing data or defaults
+  const [formData, setFormData] = useState(
+    productToEdit || {
+      name: "",
+      sku: "",
+      category: CATEGORIES[0],
+      price: "",
+      stock: "",
+      status: "In Stock",
+      image: "",
+    },
+  );
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -38,24 +32,20 @@ const AddProductModal = ({ isOpen, onClose, onSave, productToEdit }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-
-    // Create the product object
     const finalProduct = {
       ...formData,
-      id: productToEdit ? productToEdit.id : Date.now(), // Keep old ID if editing, else new ID
+      id: productToEdit ? productToEdit.id : Date.now(),
       price: parseFloat(formData.price),
       stock: parseInt(formData.stock),
     };
-
-    onSave(finalProduct); // Send back to App.jsx
+    onSave(finalProduct);
     onClose();
   };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center p-6 border-b border-slate-100">
-          {/* Change Title based on mode */}
           <h2 className="text-xl font-bold text-slate-800">
             {productToEdit ? "Edit Product" : "Add New Product"}
           </h2>
@@ -68,6 +58,29 @@ const AddProductModal = ({ isOpen, onClose, onSave, productToEdit }) => {
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Product Image URL
+            </label>
+            <input
+              name="image"
+              value={formData.image || ""}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              placeholder="https://..."
+            />
+            {formData.image && (
+              <div className="mt-2 w-full h-32 bg-slate-50 rounded-lg border border-slate-200 flex items-center justify-center overflow-hidden">
+                <img
+                  src={formData.image}
+                  alt="Preview"
+                  className="w-full h-full object-contain"
+                  onError={(e) => (e.target.style.display = "none")}
+                />
+              </div>
+            )}
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">
               Product Name
@@ -94,6 +107,7 @@ const AddProductModal = ({ isOpen, onClose, onSave, productToEdit }) => {
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
+
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">
                 Category
@@ -104,10 +118,11 @@ const AddProductModal = ({ isOpen, onClose, onSave, productToEdit }) => {
                 onChange={handleChange}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option>Electronics</option>
-                <option>Furniture</option>
-                <option>Accessories</option>
-                <option>Clothing</option>
+                {CATEGORIES.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
