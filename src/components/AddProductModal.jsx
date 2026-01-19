@@ -1,27 +1,20 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
 
-const CATEGORIES = [
-  "Engine Parts",
-  "Hydraulics",
-  "Body & Frame",
-  "Electrical",
-  "Suspension",
-  "Accessories"
-];
+// REMOVED THE HARDCODED CATEGORIES CONSTANT HERE
 
-// 1. ADD 'suppliers' PROP
-const AddProductModal = ({ onClose, onSave, productToEdit, suppliers = [] }) => {
+// 1. ADD 'categories' PROP
+const AddProductModal = ({ onClose, onSave, productToEdit, suppliers = [], categories = [] }) => {
   
   const [formData, setFormData] = useState(productToEdit || {
     name: '',
     sku: '',
-    category: CATEGORIES[0],
+    category: categories[0] || '', // Use first available category
     price: '',
     stock: '',
     status: 'In Stock',
     image: '',
-    supplier: '' // 2. NEW FIELD
+    supplier: '' 
   });
 
   const handleChange = (e) => {
@@ -96,14 +89,18 @@ const AddProductModal = ({ onClose, onSave, productToEdit, suppliers = [] }) => 
                 onChange={handleChange} 
                 className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
               >
-                {CATEGORIES.map(cat => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
+                {/* 2. MAP OVER DYNAMIC CATEGORIES PROP */}
+                {categories.length > 0 ? (
+                  categories.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))
+                ) : (
+                  <option value="">No categories</option>
+                )}
               </select>
             </div>
           </div>
 
-          {/* 3. NEW SUPPLIER DROPDOWN */}
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Supplier</label>
             <select 

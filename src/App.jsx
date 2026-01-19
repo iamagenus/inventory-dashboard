@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, DollarSign, Package, AlertTriangle, Download, ScanLine, LogOut, QrCode, Truck } from "lucide-react";
+import { Search, DollarSign, Package, AlertTriangle, Download, ScanLine, LogOut, QrCode, Truck, Layers } from "lucide-react"; // Added Layers Icon
 import toast, { Toaster } from 'react-hot-toast';
 import DashboardLayout from "./layout/DashboardLayout";
 import InventoryTable from "./components/InventoryTable";
@@ -13,7 +13,8 @@ import LabelModal from "./components/LabelModal";
 import AdjustStockModal from "./components/AdjustStockModal";
 import ThemeToggle from "./components/ThemeToggle";
 import SupplierModal from "./components/SupplierModal";
-import ReorderModal from "./components/ReorderModal"; // 1. IMPORT
+import ReorderModal from "./components/ReorderModal";
+import CategoryModal from "./components/CategoryModal"; // 1. IMPORT
 import { initialInventory } from "./data/mockData";
 
 function App() {
@@ -34,6 +35,19 @@ function App() {
     ];
   });
 
+  // 2. CATEGORY STATE (Moved from AddProductModal)
+  const [categories, setCategories] = useState(() => {
+    const saved = localStorage.getItem("inventory_categories");
+    return saved ? JSON.parse(saved) : [
+      "Engine Parts",
+      "Hydraulics",
+      "Body & Frame",
+      "Electrical",
+      "Suspension",
+      "Accessories"
+    ];
+  });
+
   const [activities, setActivities] = useState(() => {
     const saved = localStorage.getItem("inventory_activities");
     return saved ? JSON.parse(saved) : [];
@@ -44,7 +58,8 @@ function App() {
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [isLabelModalOpen, setIsLabelModalOpen] = useState(false);
   const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false);
-  const [isReorderModalOpen, setIsReorderModalOpen] = useState(false); // 2. NEW STATE
+  const [isReorderModalOpen, setIsReorderModalOpen] = useState(false);
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false); // 3. NEW MODAL STATE
   const [productToEdit, setProductToEdit] = useState(null);
   
   const [adjustModalOpen, setAdjustModalOpen] = useState(false);
@@ -55,7 +70,8 @@ function App() {
     localStorage.setItem("inventory_data", JSON.stringify(products));
     localStorage.setItem("inventory_activities", JSON.stringify(activities));
     localStorage.setItem("inventory_suppliers", JSON.stringify(suppliers));
-  }, [products, activities, suppliers]);
+    localStorage.setItem("inventory_categories", JSON.stringify(categories)); // Save categories
+  }, [products, activities, suppliers, categories]);
 
   const handleLogin = (status) => {
     setIsAuthenticated(status);
@@ -87,6 +103,21 @@ function App() {
   const handleDeleteSupplier = (id) => {
     setSuppliers(suppliers.filter(s => s.id !== id));
     toast.error("Supplier removed");
+  };
+
+  // 4. CATEGORY HANDLERS
+  const handleAddCategory = (newCat) => {
+    if (categories.includes(newCat)) {
+        toast.error("Category already exists");
+        return;
+    }
+    setCategories([...categories, newCat]);
+    toast.success(`Added category: ${newCat}`);
+  };
+
+  const handleDeleteCategory = (catToDelete) => {
+    setCategories(categories.filter(c => c !== catToDelete));
+    toast.success("Category deleted");
   };
 
   const handleAdjustClick = (product, type) => {
@@ -233,7 +264,15 @@ function App() {
           onDelete={handleDeleteSupplier}
         />
 
-        {/* 3. NEW REORDER MODAL */}
+        {/* 5. MOUNT CATEGORY MODAL */}
+        <CategoryModal
+          isOpen={isCategoryModalOpen}
+          onClose={() => setIsCategoryModalOpen(false)}
+          categories={categories}
+          onAdd={handleAddCategory}
+          onDelete={handleDeleteCategory}
+        />
+
         <ReorderModal
           isOpen={isReorderModalOpen}
           onClose={() => setIsReorderModalOpen(false)}
@@ -265,7 +304,6 @@ function App() {
             <StatsCard title="Total Inventory Value" value={`$${totalValue.toLocaleString()}`} icon={DollarSign} color="bg-blue-500" />
             <StatsCard title="Total Products" value={totalProducts} icon={Package} color="bg-purple-500" />
             
-            {/* 4. MAKE THIS CARD CLICKABLE */}
             <div 
               onClick={() => setIsReorderModalOpen(true)} 
               className="cursor-pointer hover:opacity-90 transition-opacity"
@@ -311,20 +349,27 @@ function App() {
               </div>
 
               <div className="flex gap-3 w-full md:w-auto">
+                {/* 6. NEW BUTTONS SECTION */}
                 <button
                   onClick={() => setIsSupplierModalOpen(true)}
-                  className="flex-1 md:flex-none border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 px-4 py-2.5 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2"
+                  className="flex-1 md:flex-none border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 px-3 py-2.5 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2"
                 >
                   <Truck size={18} />
-                  Suppliers
+                </button>
+
+                <button
+                  onClick={() => setIsCategoryModalOpen(true)}
+                  className="flex-1 md:flex-none border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 px-3 py-2.5 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2"
+                  title="Manage Categories"
+                >
+                  <Layers size={18} />
                 </button>
 
                 <button
                   onClick={() => setIsLabelModalOpen(true)}
-                  className="flex-1 md:flex-none border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 px-4 py-2.5 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2"
+                  className="flex-1 md:flex-none border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 px-3 py-2.5 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2"
                 >
                   <QrCode size={18} />
-                  Labels
                 </button>
 
                 <button onClick={handleExport} className="flex-1 md:flex-none border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 px-4 py-2.5 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2">
@@ -353,6 +398,7 @@ function App() {
               onSave={handleSaveProduct}
               productToEdit={productToEdit}
               suppliers={suppliers}
+              categories={categories} // 7. Pass Categories
             />
           )}
         </div>
