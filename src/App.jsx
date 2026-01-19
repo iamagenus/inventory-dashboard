@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, DollarSign, Package, AlertTriangle, Download, ScanLine, LogOut, QrCode, Truck } from "lucide-react"; // Added Truck Icon
+import { Search, DollarSign, Package, AlertTriangle, Download, ScanLine, LogOut, QrCode, Truck } from "lucide-react";
 import toast, { Toaster } from 'react-hot-toast';
 import DashboardLayout from "./layout/DashboardLayout";
 import InventoryTable from "./components/InventoryTable";
@@ -12,7 +12,8 @@ import LoginScreen from "./components/LoginScreen";
 import LabelModal from "./components/LabelModal";
 import AdjustStockModal from "./components/AdjustStockModal";
 import ThemeToggle from "./components/ThemeToggle";
-import SupplierModal from "./components/SupplierModal"; // 1. IMPORT
+import SupplierModal from "./components/SupplierModal";
+import ReorderModal from "./components/ReorderModal"; // 1. IMPORT
 import { initialInventory } from "./data/mockData";
 
 function App() {
@@ -25,7 +26,6 @@ function App() {
     return saved ? JSON.parse(saved) : initialInventory;
   });
 
-  // 2. SUPPLIER STATE
   const [suppliers, setSuppliers] = useState(() => {
     const saved = localStorage.getItem("inventory_suppliers");
     return saved ? JSON.parse(saved) : [
@@ -43,7 +43,8 @@ function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [isLabelModalOpen, setIsLabelModalOpen] = useState(false);
-  const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false); // 3. MODAL STATE
+  const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false);
+  const [isReorderModalOpen, setIsReorderModalOpen] = useState(false); // 2. NEW STATE
   const [productToEdit, setProductToEdit] = useState(null);
   
   const [adjustModalOpen, setAdjustModalOpen] = useState(false);
@@ -53,7 +54,7 @@ function App() {
   useEffect(() => {
     localStorage.setItem("inventory_data", JSON.stringify(products));
     localStorage.setItem("inventory_activities", JSON.stringify(activities));
-    localStorage.setItem("inventory_suppliers", JSON.stringify(suppliers)); // Save suppliers
+    localStorage.setItem("inventory_suppliers", JSON.stringify(suppliers));
   }, [products, activities, suppliers]);
 
   const handleLogin = (status) => {
@@ -77,7 +78,6 @@ function App() {
     setActivities([newLog, ...activities]);
   };
 
-  // 4. SUPPLIER HANDLERS
   const handleAddSupplier = (newSupplier) => {
     setSuppliers([...suppliers, newSupplier]);
     toast.success(`Added supplier: ${newSupplier.name}`);
@@ -225,13 +225,19 @@ function App() {
           type={adjustType}
         />
         
-        {/* 5. MOUNT SUPPLIER MODAL */}
         <SupplierModal
           isOpen={isSupplierModalOpen}
           onClose={() => setIsSupplierModalOpen(false)}
           suppliers={suppliers}
           onAdd={handleAddSupplier}
           onDelete={handleDeleteSupplier}
+        />
+
+        {/* 3. NEW REORDER MODAL */}
+        <ReorderModal
+          isOpen={isReorderModalOpen}
+          onClose={() => setIsReorderModalOpen(false)}
+          products={products}
         />
 
         <div className="space-y-6">
@@ -258,7 +264,19 @@ function App() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <StatsCard title="Total Inventory Value" value={`$${totalValue.toLocaleString()}`} icon={DollarSign} color="bg-blue-500" />
             <StatsCard title="Total Products" value={totalProducts} icon={Package} color="bg-purple-500" />
-            <StatsCard title="Low Stock Alerts" value={lowStockCount} icon={AlertTriangle} color={lowStockCount > 0 ? "bg-amber-500" : "bg-emerald-500"} />
+            
+            {/* 4. MAKE THIS CARD CLICKABLE */}
+            <div 
+              onClick={() => setIsReorderModalOpen(true)} 
+              className="cursor-pointer hover:opacity-90 transition-opacity"
+            >
+              <StatsCard 
+                title="Low Stock Alerts" 
+                value={lowStockCount} 
+                icon={AlertTriangle} 
+                color={lowStockCount > 0 ? "bg-amber-500" : "bg-emerald-500"} 
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -293,7 +311,6 @@ function App() {
               </div>
 
               <div className="flex gap-3 w-full md:w-auto">
-                {/* 6. NEW BUTTON: SUPPLIERS */}
                 <button
                   onClick={() => setIsSupplierModalOpen(true)}
                   className="flex-1 md:flex-none border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 px-4 py-2.5 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2"
@@ -335,7 +352,7 @@ function App() {
               onClose={() => setIsModalOpen(false)}
               onSave={handleSaveProduct}
               productToEdit={productToEdit}
-              suppliers={suppliers} // 7. Pass suppliers to product modal
+              suppliers={suppliers}
             />
           )}
         </div>
