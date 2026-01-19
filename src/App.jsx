@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, DollarSign, Package, AlertTriangle, Download, ScanLine, LogOut, QrCode, Settings, Plus } from "lucide-react"; // Added Settings, Plus
+import { Search, DollarSign, Package, AlertTriangle, Download, ScanLine, LogOut, QrCode, Settings, Plus, Filter, X } from "lucide-react"; // Added Filter, X
 import toast, { Toaster } from 'react-hot-toast';
 import DashboardLayout from "./layout/DashboardLayout";
 import InventoryTable from "./components/InventoryTable";
@@ -15,7 +15,7 @@ import ThemeToggle from "./components/ThemeToggle";
 import SupplierModal from "./components/SupplierModal";
 import ReorderModal from "./components/ReorderModal";
 import CategoryModal from "./components/CategoryModal";
-import SettingsModal from "./components/SettingsModal"; // 1. IMPORT SETTINGS
+import SettingsModal from "./components/SettingsModal";
 import { initialInventory } from "./data/mockData";
 
 function App() {
@@ -53,14 +53,20 @@ function App() {
     return saved ? JSON.parse(saved) : [];
   });
 
+  // --- FILTERS STATE ---
   const [searchTerm, setSearchTerm] = useState("");
+  const [filterCategory, setFilterCategory] = useState("All");
+  const [filterSupplier, setFilterSupplier] = useState("All");
+  const [filterStatus, setFilterStatus] = useState("All"); // All, Low Stock, Out of Stock
+  // ---------------------
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [isLabelModalOpen, setIsLabelModalOpen] = useState(false);
   const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false);
   const [isReorderModalOpen, setIsReorderModalOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false); // 2. SETTINGS STATE
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [productToEdit, setProductToEdit] = useState(null);
   
   const [adjustModalOpen, setAdjustModalOpen] = useState(false);
@@ -216,11 +222,27 @@ function App() {
     setIsModalOpen(true);
   };
 
-  const filteredProducts = products.filter(
-    (product) =>
-      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.sku.toLowerCase().includes(searchTerm.toLowerCase()),
-  );
+  const clearFilters = () => {
+    setSearchTerm("");
+    setFilterCategory("All");
+    setFilterSupplier("All");
+    setFilterStatus("All");
+  };
+
+  // --- UPDATED FILTER LOGIC ---
+  const filteredProducts = products.filter((product) => {
+    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          product.sku.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesCategory = filterCategory === "All" || product.category === filterCategory;
+    const matchesSupplier = filterSupplier === "All" || product.supplier === filterSupplier;
+    
+    let matchesStatus = true;
+    if (filterStatus === "Low Stock") matchesStatus = product.stock < 10 && product.stock > 0;
+    if (filterStatus === "Out of Stock") matchesStatus = product.stock === 0;
+    
+    return matchesSearch && matchesCategory && matchesSupplier && matchesStatus;
+  });
 
   if (!isAuthenticated) {
     return (
@@ -279,7 +301,6 @@ function App() {
           products={products}
         />
 
-        {/* 3. NEW SETTINGS MODAL */}
         <SettingsModal
           isOpen={isSettingsOpen}
           onClose={() => setIsSettingsOpen(false)}
@@ -302,7 +323,6 @@ function App() {
             <div className="flex gap-3">
               <ThemeToggle />
               
-              {/* 4. NEW SETTINGS BUTTON */}
               <button 
                 onClick={() => setIsSettingsOpen(true)}
                 className="p-2 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
@@ -347,10 +367,12 @@ function App() {
             </div>
           </div>
 
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+          {/* --- NEW FILTER BAR --- */}
+          <div className="flex flex-col gap-4 bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
              
-             <div className="relative group w-full md:w-96 flex gap-2">
-                <div className="relative flex-1">
+            {/* Top Row: Search & Scan */}
+            <div className="flex flex-col md:flex-row gap-3">
+               <div className="relative group flex-1">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={20} />
                   <input
                     type="text"
@@ -362,32 +384,95 @@ function App() {
                 </div>
                 <button 
                   onClick={() => setIsScannerOpen(true)}
-                  className="bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 px-3 rounded-lg border border-slate-200 dark:border-slate-600 transition-colors"
+                  className="bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-600 transition-colors flex items-center justify-center gap-2"
                   title="Scan Barcode"
                 >
                   <ScanLine size={20} />
+                  <span className="md:hidden">Scan</span>
                 </button>
+            </div>
+
+            {/* Bottom Row: Filters & Actions */}
+            <div className="flex flex-col md:flex-row gap-3 justify-between">
+              
+              {/* Filters Group */}
+              <div className="flex flex-col md:flex-row gap-2 flex-1">
+                
+                {/* Category Filter */}
+                <div className="relative">
+                  <select 
+                    value={filterCategory}
+                    onChange={(e) => setFilterCategory(e.target.value)}
+                    className="w-full md:w-40 pl-3 pr-8 py-2 text-sm border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50 dark:bg-slate-700 text-slate-700 dark:text-white appearance-none cursor-pointer"
+                  >
+                    <option value="All">All Categories</option>
+                    {categories.map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                  <Filter className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={14} />
+                </div>
+
+                {/* Supplier Filter */}
+                <div className="relative">
+                  <select 
+                    value={filterSupplier}
+                    onChange={(e) => setFilterSupplier(e.target.value)}
+                    className="w-full md:w-40 pl-3 pr-8 py-2 text-sm border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50 dark:bg-slate-700 text-slate-700 dark:text-white appearance-none cursor-pointer"
+                  >
+                    <option value="All">All Suppliers</option>
+                    {suppliers.map(sup => (
+                      <option key={sup.id} value={sup.name}>{sup.name}</option>
+                    ))}
+                  </select>
+                  <Filter className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={14} />
+                </div>
+
+                {/* Status Filter */}
+                <div className="relative">
+                  <select 
+                    value={filterStatus}
+                    onChange={(e) => setFilterStatus(e.target.value)}
+                    className="w-full md:w-40 pl-3 pr-8 py-2 text-sm border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50 dark:bg-slate-700 text-slate-700 dark:text-white appearance-none cursor-pointer"
+                  >
+                    <option value="All">All Status</option>
+                    <option value="Low Stock">Low Stock</option>
+                    <option value="Out of Stock">Out of Stock</option>
+                  </select>
+                  <AlertTriangle className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={14} />
+                </div>
+
+                {/* Reset Filters Button (only shows if filters are active) */}
+                {(filterCategory !== "All" || filterSupplier !== "All" || filterStatus !== "All" || searchTerm) && (
+                  <button 
+                    onClick={clearFilters}
+                    className="text-slate-500 dark:text-slate-400 hover:text-red-500 text-sm flex items-center gap-1 px-2"
+                  >
+                    <X size={14} /> Clear
+                  </button>
+                )}
               </div>
 
-              <div className="flex gap-3 w-full md:w-auto">
-                {/* 5. CLEANER BUTTON GROUP */}
+              {/* Action Buttons */}
+              <div className="flex gap-2 w-full md:w-auto border-t md:border-t-0 border-slate-100 dark:border-slate-700 pt-3 md:pt-0">
                 <button
                   onClick={() => setIsLabelModalOpen(true)}
-                  className="flex-1 md:flex-none border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 px-4 py-2.5 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2"
+                  className="flex-1 md:flex-none border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 px-3 py-2 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2"
+                  title="Print Labels"
                 >
                   <QrCode size={18} />
-                  <span className="hidden md:inline">Labels</span>
                 </button>
 
-                <button onClick={handleExport} className="flex-1 md:flex-none border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 px-4 py-2.5 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2">
+                <button onClick={handleExport} className="flex-1 md:flex-none border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 px-3 py-2 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2">
                   <Download size={18} />
-                  <span className="hidden md:inline">CSV</span>
+                  <span className="hidden md:inline">Export</span>
                 </button>
                 
-                <button onClick={handleAddClick} className="flex-1 md:flex-none bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2">
-                  <Plus size={18} /> Add Product
+                <button onClick={handleAddClick} className="flex-1 md:flex-none bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2">
+                  <Plus size={18} /> Add
                 </button>
               </div>
+            </div>
           </div>
 
           <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
