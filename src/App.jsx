@@ -26,6 +26,7 @@ import CategoryModal from "./components/CategoryModal";
 import SettingsModal from "./components/SettingsModal";
 import POSModal from "./components/POSModal";
 import SalesHistoryModal from "./components/SalesHistoryModal";
+import PurchaseOrderModal from "./components/PurchaseOrderModal";
 
 // Data
 import { initialInventory } from "./data/mockData";
@@ -74,6 +75,11 @@ function App() {
     return saved ? JSON.parse(saved) : [];
   });
 
+  const [purchaseOrders, setPurchaseOrders] = useState(() => {
+    const saved = localStorage.getItem("inventory_orders");
+    return saved ? JSON.parse(saved) : [];
+  });
+
   // Filter States
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCategory, setFilterCategory] = useState("All");
@@ -90,6 +96,7 @@ function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isPOSOpen, setIsPOSOpen] = useState(false);
   const [isSalesHistoryOpen, setIsSalesHistoryOpen] = useState(false);
+  const [isPOModalOpen, setIsPOModalOpen] = useState(false);
   
   // Selection States
   const [productToEdit, setProductToEdit] = useState(null);
@@ -104,7 +111,8 @@ function App() {
     localStorage.setItem("inventory_suppliers", JSON.stringify(suppliers));
     localStorage.setItem("inventory_categories", JSON.stringify(categories));
     localStorage.setItem("inventory_sales", JSON.stringify(sales));
-  }, [products, activities, suppliers, categories, sales]);
+    localStorage.setItem("inventory_orders", JSON.stringify(purchaseOrders));
+  }, [products, activities, suppliers, categories, sales, purchaseOrders]);
 
   // --- 3. CORE HANDLERS ---
 
@@ -249,6 +257,38 @@ function App() {
     toast.success("Sale Recorded Successfully!");
   };
 
+  // Purchase Orders
+  const handleCreateOrder = (order) => {
+    setPurchaseOrders([order, ...purchaseOrders]);
+    toast.success("Purchase Order Created!");
+    addToHistory('add', `Created PO #${order.id} for ${order.supplier}`);
+  };
+
+  const handleDeleteOrder = (id) => {
+    setPurchaseOrders(purchaseOrders.filter(o => o.id !== id));
+    toast.error("Order Cancelled");
+  };
+
+  const handleReceiveOrder = (order) => {
+    const updatedProducts = [...products];
+    order.items.forEach(item => {
+        const idx = updatedProducts.findIndex(p => p.id === item.id);
+        if (idx > -1) {
+            updatedProducts[idx].stock += parseInt(item.qty);
+            updatedProducts[idx].status = 'In Stock'; 
+        }
+    });
+    setProducts(updatedProducts);
+
+    const updatedOrders = purchaseOrders.map(o => 
+        o.id === order.id ? { ...o, status: 'Received' } : o
+    );
+    setPurchaseOrders(updatedOrders);
+
+    toast.success("Items Received into Inventory!");
+    addToHistory('add', `Received PO #${order.id} from ${order.supplier}`);
+  };
+
   // Tools
   const handleScan = (code) => {
     setSearchTerm(code);
@@ -347,6 +387,17 @@ function App() {
         <POSModal isOpen={isPOSOpen} onClose={() => setIsPOSOpen(false)} products={products} onCompleteSale={handlePOSSale} />
         <SalesHistoryModal isOpen={isSalesHistoryOpen} onClose={() => setIsSalesHistoryOpen(false)} sales={sales} />
         
+        <PurchaseOrderModal 
+            isOpen={isPOModalOpen}
+            onClose={() => setIsPOModalOpen(false)}
+            orders={purchaseOrders}
+            products={products}
+            suppliers={suppliers}
+            onCreateOrder={handleCreateOrder}
+            onReceiveOrder={handleReceiveOrder}
+            onDeleteOrder={handleDeleteOrder}
+        />
+
         {isModalOpen && (
           <AddProductModal onClose={() => setIsModalOpen(false)} onSave={handleSaveProduct} productToEdit={productToEdit} suppliers={suppliers} categories={categories} />
         )}
@@ -386,7 +437,7 @@ function App() {
             </div>
           </div>
           
-          {/* Low Stock Banner (If Needed) */}
+          {/* Low Stock Banner */}
           {lowStockCount > 0 && (
             <div 
               onClick={() => setIsReorderModalOpen(true)}
@@ -440,8 +491,6 @@ function App() {
               
               {/* Filters Group */}
               <div className="flex flex-col md:flex-row gap-2 flex-1">
-                
-                {/* Category Filter */}
                 <div className="relative">
                   <select 
                     value={filterCategory}
@@ -456,7 +505,6 @@ function App() {
                   <Filter className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={14} />
                 </div>
 
-                {/* Supplier Filter */}
                 <div className="relative">
                   <select 
                     value={filterSupplier}
@@ -471,7 +519,6 @@ function App() {
                   <Filter className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={14} />
                 </div>
 
-                {/* Status Filter */}
                 <div className="relative">
                   <select 
                     value={filterStatus}
@@ -495,6 +542,14 @@ function App() {
               {/* Action Buttons */}
               <div className="flex gap-2 w-full md:w-auto border-t md:border-t-0 border-slate-100 dark:border-slate-700 pt-3 md:pt-0">
                 <button
+                  onClick={() => setIsPOModalOpen(true)}
+                  className="flex-1 md:flex-none border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 px-3 py-2 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2"
+                  title="Purchase Orders"
+                >
+                   <Truck size={18} />
+                </button>
+
+                <button
                   onClick={() => setIsLabelModalOpen(true)}
                   className="flex-1 md:flex-none border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 px-3 py-2 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2"
                   title="Print Labels"
@@ -504,7 +559,6 @@ function App() {
 
                 <button onClick={handleExport} className="flex-1 md:flex-none border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 px-3 py-2 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2">
                   <Download size={18} />
-                  <span className="hidden md:inline">Export</span>
                 </button>
                 
                 <button onClick={handleAddClick} className="flex-1 md:flex-none bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2">
