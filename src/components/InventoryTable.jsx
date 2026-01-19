@@ -9,9 +9,13 @@ const InventoryTable = ({ products, onDelete, onEdit, onAdjust }) => {
     let aValue = a[sortConfig.key];
     let bValue = b[sortConfig.key];
 
+    // Handle missing values safely
+    if (aValue === undefined || aValue === null) aValue = '';
+    if (bValue === undefined || bValue === null) bValue = '';
+
     if (sortConfig.key === 'price' || sortConfig.key === 'stock') {
-      aValue = parseFloat(aValue);
-      bValue = parseFloat(bValue);
+      aValue = parseFloat(aValue) || 0;
+      bValue = parseFloat(bValue) || 0;
     } else {
       aValue = String(aValue).toLowerCase();
       bValue = String(bValue).toLowerCase();
@@ -59,12 +63,13 @@ const InventoryTable = ({ products, onDelete, onEdit, onAdjust }) => {
         <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
           <tr>
             {[
-              { key: 'name', label: 'Product Name', width: 'w-1/3' },
-              { key: 'sku', label: 'SKU', width: 'w-32' },
-              { key: 'category', label: 'Category', width: 'w-32' },
+              { key: 'name', label: 'Product Name', width: 'w-1/4' }, // Adjusted width
+              { key: 'sku', label: 'SKU', width: 'w-24' },
+              { key: 'supplier', label: 'Supplier', width: 'w-32' }, // 1. ADDED SUPPLIER COLUMN
+              { key: 'category', label: 'Category', width: 'w-28' },
               { key: 'price', label: 'Price', width: 'w-24' },
               { key: 'stock', label: 'Stock', width: 'w-24' },
-              { key: 'status', label: 'Status', width: 'w-40' },
+              { key: 'status', label: 'Status', width: 'w-36' },
             ].map((col) => (
               <th 
                 key={col.key}
@@ -100,6 +105,10 @@ const InventoryTable = ({ products, onDelete, onEdit, onAdjust }) => {
                 </td>
 
                 <td className="px-6 py-4 text-sm text-slate-500 dark:text-slate-400 font-mono">{product.sku}</td>
+                {/* 2. ADDED SUPPLIER CELL */}
+                <td className="px-6 py-4 text-sm text-slate-500 dark:text-slate-400 truncate font-medium">
+                    {product.supplier || <span className="text-slate-300 dark:text-slate-600 italic">--</span>}
+                </td>
                 <td className="px-6 py-4 text-sm text-slate-500 dark:text-slate-400">{product.category}</td>
                 <td className="px-6 py-4 text-sm text-slate-700 dark:text-slate-200 font-medium">${Number(product.price).toFixed(2)}</td>
                 <td className="px-6 py-4 text-sm text-slate-700 dark:text-slate-200 font-bold">{product.stock}</td>
@@ -132,7 +141,7 @@ const InventoryTable = ({ products, onDelete, onEdit, onAdjust }) => {
             ))
           ) : (
             <tr>
-              <td colSpan="7" className="px-6 py-12 text-center text-slate-400 dark:text-slate-500">
+              <td colSpan="8" className="px-6 py-12 text-center text-slate-400 dark:text-slate-500">
                 <div className="flex flex-col items-center justify-center gap-2">
                   <div className="p-3 bg-slate-100 dark:bg-slate-700/50 rounded-full">
                     <AlertCircle size={24} />
