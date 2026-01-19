@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, DollarSign, Package, AlertTriangle, Download, ScanLine, LogOut, QrCode } from "lucide-react";
+import { Search, DollarSign, Package, AlertTriangle, Download, ScanLine, LogOut, QrCode, Truck } from "lucide-react"; // Added Truck Icon
 import toast, { Toaster } from 'react-hot-toast';
 import DashboardLayout from "./layout/DashboardLayout";
 import InventoryTable from "./components/InventoryTable";
@@ -12,6 +12,7 @@ import LoginScreen from "./components/LoginScreen";
 import LabelModal from "./components/LabelModal";
 import AdjustStockModal from "./components/AdjustStockModal";
 import ThemeToggle from "./components/ThemeToggle";
+import SupplierModal from "./components/SupplierModal"; // 1. IMPORT
 import { initialInventory } from "./data/mockData";
 
 function App() {
@@ -24,6 +25,15 @@ function App() {
     return saved ? JSON.parse(saved) : initialInventory;
   });
 
+  // 2. SUPPLIER STATE
+  const [suppliers, setSuppliers] = useState(() => {
+    const saved = localStorage.getItem("inventory_suppliers");
+    return saved ? JSON.parse(saved) : [
+      { id: 1, name: "NAPA Auto Parts", contact: "Local Branch" },
+      { id: 2, name: "Global Industrial", contact: "Sales Dept" }
+    ];
+  });
+
   const [activities, setActivities] = useState(() => {
     const saved = localStorage.getItem("inventory_activities");
     return saved ? JSON.parse(saved) : [];
@@ -33,6 +43,7 @@ function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [isLabelModalOpen, setIsLabelModalOpen] = useState(false);
+  const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false); // 3. MODAL STATE
   const [productToEdit, setProductToEdit] = useState(null);
   
   const [adjustModalOpen, setAdjustModalOpen] = useState(false);
@@ -42,7 +53,8 @@ function App() {
   useEffect(() => {
     localStorage.setItem("inventory_data", JSON.stringify(products));
     localStorage.setItem("inventory_activities", JSON.stringify(activities));
-  }, [products, activities]);
+    localStorage.setItem("inventory_suppliers", JSON.stringify(suppliers)); // Save suppliers
+  }, [products, activities, suppliers]);
 
   const handleLogin = (status) => {
     setIsAuthenticated(status);
@@ -63,6 +75,18 @@ function App() {
       timestamp: new Date().toLocaleString()
     };
     setActivities([newLog, ...activities]);
+  };
+
+  // 4. SUPPLIER HANDLERS
+  const handleAddSupplier = (newSupplier) => {
+    setSuppliers([...suppliers, newSupplier]);
+    toast.success(`Added supplier: ${newSupplier.name}`);
+    addToHistory('add', `New supplier registered: ${newSupplier.name}`);
+  };
+
+  const handleDeleteSupplier = (id) => {
+    setSuppliers(suppliers.filter(s => s.id !== id));
+    toast.error("Supplier removed");
   };
 
   const handleAdjustClick = (product, type) => {
@@ -114,9 +138,9 @@ function App() {
   };
 
   const handleExport = () => {
-    const headers = ["ID,Name,SKU,Category,Price,Stock,Status"];
+    const headers = ["ID,Name,SKU,Category,Price,Stock,Status,Supplier"];
     const rows = products.map(p => 
-      `${p.id},"${p.name}",${p.sku},${p.category},${p.price},${p.stock},${p.status}`
+      `${p.id},"${p.name}",${p.sku},${p.category},${p.price},${p.stock},${p.status},"${p.supplier || ''}"`
     );
     const csvContent = "data:text/csv;charset=utf-8," + [headers, ...rows].join("\n");
     const encodedUri = encodeURI(csvContent);
@@ -200,6 +224,15 @@ function App() {
           product={adjustProduct}
           type={adjustType}
         />
+        
+        {/* 5. MOUNT SUPPLIER MODAL */}
+        <SupplierModal
+          isOpen={isSupplierModalOpen}
+          onClose={() => setIsSupplierModalOpen(false)}
+          suppliers={suppliers}
+          onAdd={handleAddSupplier}
+          onDelete={handleDeleteSupplier}
+        />
 
         <div className="space-y-6">
           
@@ -260,6 +293,15 @@ function App() {
               </div>
 
               <div className="flex gap-3 w-full md:w-auto">
+                {/* 6. NEW BUTTON: SUPPLIERS */}
+                <button
+                  onClick={() => setIsSupplierModalOpen(true)}
+                  className="flex-1 md:flex-none border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 px-4 py-2.5 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2"
+                >
+                  <Truck size={18} />
+                  Suppliers
+                </button>
+
                 <button
                   onClick={() => setIsLabelModalOpen(true)}
                   className="flex-1 md:flex-none border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 px-4 py-2.5 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2"
@@ -270,7 +312,7 @@ function App() {
 
                 <button onClick={handleExport} className="flex-1 md:flex-none border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 px-4 py-2.5 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2">
                   <Download size={18} />
-                  Export CSV
+                  Export
                 </button>
                 
                 <button onClick={handleAddClick} className="flex-1 md:flex-none bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2">
@@ -293,6 +335,7 @@ function App() {
               onClose={() => setIsModalOpen(false)}
               onSave={handleSaveProduct}
               productToEdit={productToEdit}
+              suppliers={suppliers} // 7. Pass suppliers to product modal
             />
           )}
         </div>
