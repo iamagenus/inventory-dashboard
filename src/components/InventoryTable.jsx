@@ -9,7 +9,6 @@ const InventoryTable = ({ products, onDelete, onEdit, onAdjust }) => {
     let aValue = a[sortConfig.key];
     let bValue = b[sortConfig.key];
 
-    // Handle missing values safely
     if (aValue === undefined || aValue === null) aValue = '';
     if (bValue === undefined || bValue === null) bValue = '';
 
@@ -57,15 +56,23 @@ const InventoryTable = ({ products, onDelete, onEdit, onAdjust }) => {
     }
   };
 
+  // 1. CALCULATE MARGIN HELPER
+  const getMargin = (price, cost) => {
+    if (!price || !cost) return null;
+    const p = parseFloat(price);
+    const c = parseFloat(cost);
+    if (p <= 0) return 0;
+    return ((p - c) / p) * 100;
+  };
+
   return (
     <div className="overflow-x-auto bg-white dark:bg-slate-800">
       <table className="w-full text-left border-collapse table-fixed">
         <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
           <tr>
             {[
-              { key: 'name', label: 'Product Name', width: 'w-1/4' }, // Adjusted width
+              { key: 'name', label: 'Product Name', width: 'w-1/4' },
               { key: 'sku', label: 'SKU', width: 'w-24' },
-              { key: 'supplier', label: 'Supplier', width: 'w-32' }, // 1. ADDED SUPPLIER COLUMN
               { key: 'category', label: 'Category', width: 'w-28' },
               { key: 'price', label: 'Price', width: 'w-24' },
               { key: 'stock', label: 'Stock', width: 'w-24' },
@@ -84,61 +91,71 @@ const InventoryTable = ({ products, onDelete, onEdit, onAdjust }) => {
         </thead>
         <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
           {sortedProducts.length > 0 ? (
-            sortedProducts.map((product) => (
-              <tr key={product.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+            sortedProducts.map((product) => {
+                const margin = getMargin(product.price, product.cost);
                 
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 flex items-center justify-center overflow-hidden flex-shrink-0 relative">
-                      {product.image ? (
-                        <img 
-                          src={product.image} 
-                          alt={product.name} 
-                          className="h-full w-full object-cover"
-                          onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block'; }}
-                        />
-                      ) : null}
-                      <Package size={20} className="text-slate-400 dark:text-slate-500 absolute" style={{ display: product.image ? 'none' : 'block' }} />
-                    </div>
-                    <div className="font-medium text-slate-900 dark:text-white truncate">{product.name}</div>
-                  </div>
-                </td>
+                return (
+                  <tr key={product.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                    
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-lg bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 flex items-center justify-center overflow-hidden flex-shrink-0 relative">
+                          {product.image ? (
+                            <img 
+                              src={product.image} 
+                              alt={product.name} 
+                              className="h-full w-full object-cover"
+                              onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block'; }}
+                            />
+                          ) : null}
+                          <Package size={20} className="text-slate-400 dark:text-slate-500 absolute" style={{ display: product.image ? 'none' : 'block' }} />
+                        </div>
+                        <div className="font-medium text-slate-900 dark:text-white truncate">{product.name}</div>
+                      </div>
+                    </td>
 
-                <td className="px-6 py-4 text-sm text-slate-500 dark:text-slate-400 font-mono">{product.sku}</td>
-                {/* 2. ADDED SUPPLIER CELL */}
-                <td className="px-6 py-4 text-sm text-slate-500 dark:text-slate-400 truncate font-medium">
-                    {product.supplier || <span className="text-slate-300 dark:text-slate-600 italic">--</span>}
-                </td>
-                <td className="px-6 py-4 text-sm text-slate-500 dark:text-slate-400">{product.category}</td>
-                <td className="px-6 py-4 text-sm text-slate-700 dark:text-slate-200 font-medium">${Number(product.price).toFixed(2)}</td>
-                <td className="px-6 py-4 text-sm text-slate-700 dark:text-slate-200 font-bold">{product.stock}</td>
-                
-                <td className="px-6 py-4">
-                  <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(product.status)}`}>
-                    {getStatusIcon(product.status)}
-                    {product.status}
-                  </span>
-                </td>
+                    <td className="px-6 py-4 text-sm text-slate-500 dark:text-slate-400 font-mono">{product.sku}</td>
+                    <td className="px-6 py-4 text-sm text-slate-500 dark:text-slate-400">{product.category}</td>
+                    
+                    {/* 2. PRICE CELL WITH MARGIN */}
+                    <td className="px-6 py-4">
+                        <div className="text-sm text-slate-700 dark:text-slate-200 font-medium">${Number(product.price).toFixed(2)}</div>
+                        {margin !== null && (
+                            <div className={`text-[10px] font-bold ${margin < 20 ? 'text-red-500' : 'text-emerald-500'}`}>
+                                {margin.toFixed(0)}% Margin
+                            </div>
+                        )}
+                    </td>
 
-                <td className="px-6 py-4 text-right">
-                  <div className="flex justify-end gap-2">
-                    <button onClick={() => onAdjust(product, 'add')} className="text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 p-1.5 rounded transition-colors" title="Restock">
-                      <PlusCircle size={18} />
-                    </button>
-                    <button onClick={() => onAdjust(product, 'subtract')} className="text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/30 p-1.5 rounded transition-colors" title="Issue Stock">
-                      <MinusCircle size={18} />
-                    </button>
-                    <div className="w-px h-6 bg-slate-200 dark:bg-slate-700 mx-1"></div>
-                    <button onClick={() => onEdit(product)} className="text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 p-1.5 rounded transition-colors">
-                      <Edit size={18} />
-                    </button>
-                    <button onClick={() => onDelete(product.id)} className="text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 p-1.5 rounded transition-colors">
-                      <Trash2 size={18} />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))
+                    <td className="px-6 py-4 text-sm text-slate-700 dark:text-slate-200 font-bold">{product.stock}</td>
+                    
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(product.status)}`}>
+                        {getStatusIcon(product.status)}
+                        {product.status}
+                      </span>
+                    </td>
+
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex justify-end gap-2">
+                        <button onClick={() => onAdjust(product, 'add')} className="text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 p-1.5 rounded transition-colors" title="Restock">
+                          <PlusCircle size={18} />
+                        </button>
+                        <button onClick={() => onAdjust(product, 'subtract')} className="text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/30 p-1.5 rounded transition-colors" title="Issue Stock">
+                          <MinusCircle size={18} />
+                        </button>
+                        <div className="w-px h-6 bg-slate-200 dark:bg-slate-700 mx-1"></div>
+                        <button onClick={() => onEdit(product)} className="text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 p-1.5 rounded transition-colors">
+                          <Edit size={18} />
+                        </button>
+                        <button onClick={() => onDelete(product.id)} className="text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 p-1.5 rounded transition-colors">
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                )
+            })
           ) : (
             <tr>
               <td colSpan="8" className="px-6 py-12 text-center text-slate-400 dark:text-slate-500">
