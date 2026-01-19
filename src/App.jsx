@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, DollarSign, Package, AlertTriangle, Download, ScanLine, LogOut, QrCode, Truck, Layers } from "lucide-react"; // Added Layers Icon
+import { Search, DollarSign, Package, AlertTriangle, Download, ScanLine, LogOut, QrCode, Settings, Plus } from "lucide-react"; // Added Settings, Plus
 import toast, { Toaster } from 'react-hot-toast';
 import DashboardLayout from "./layout/DashboardLayout";
 import InventoryTable from "./components/InventoryTable";
@@ -14,7 +14,8 @@ import AdjustStockModal from "./components/AdjustStockModal";
 import ThemeToggle from "./components/ThemeToggle";
 import SupplierModal from "./components/SupplierModal";
 import ReorderModal from "./components/ReorderModal";
-import CategoryModal from "./components/CategoryModal"; // 1. IMPORT
+import CategoryModal from "./components/CategoryModal";
+import SettingsModal from "./components/SettingsModal"; // 1. IMPORT SETTINGS
 import { initialInventory } from "./data/mockData";
 
 function App() {
@@ -35,7 +36,6 @@ function App() {
     ];
   });
 
-  // 2. CATEGORY STATE (Moved from AddProductModal)
   const [categories, setCategories] = useState(() => {
     const saved = localStorage.getItem("inventory_categories");
     return saved ? JSON.parse(saved) : [
@@ -59,7 +59,8 @@ function App() {
   const [isLabelModalOpen, setIsLabelModalOpen] = useState(false);
   const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false);
   const [isReorderModalOpen, setIsReorderModalOpen] = useState(false);
-  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false); // 3. NEW MODAL STATE
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false); // 2. SETTINGS STATE
   const [productToEdit, setProductToEdit] = useState(null);
   
   const [adjustModalOpen, setAdjustModalOpen] = useState(false);
@@ -70,7 +71,7 @@ function App() {
     localStorage.setItem("inventory_data", JSON.stringify(products));
     localStorage.setItem("inventory_activities", JSON.stringify(activities));
     localStorage.setItem("inventory_suppliers", JSON.stringify(suppliers));
-    localStorage.setItem("inventory_categories", JSON.stringify(categories)); // Save categories
+    localStorage.setItem("inventory_categories", JSON.stringify(categories));
   }, [products, activities, suppliers, categories]);
 
   const handleLogin = (status) => {
@@ -105,7 +106,6 @@ function App() {
     toast.error("Supplier removed");
   };
 
-  // 4. CATEGORY HANDLERS
   const handleAddCategory = (newCat) => {
     if (categories.includes(newCat)) {
         toast.error("Category already exists");
@@ -236,6 +236,7 @@ function App() {
       <DashboardLayout>
         <Toaster position="top-right" />
         
+        {/* Modals */}
         <BarcodeScanner 
           isOpen={isScannerOpen} 
           onClose={() => setIsScannerOpen(false)} 
@@ -264,7 +265,6 @@ function App() {
           onDelete={handleDeleteSupplier}
         />
 
-        {/* 5. MOUNT CATEGORY MODAL */}
         <CategoryModal
           isOpen={isCategoryModalOpen}
           onClose={() => setIsCategoryModalOpen(false)}
@@ -279,6 +279,18 @@ function App() {
           products={products}
         />
 
+        {/* 3. NEW SETTINGS MODAL */}
+        <SettingsModal
+          isOpen={isSettingsOpen}
+          onClose={() => setIsSettingsOpen(false)}
+          onOpenCategories={() => setIsCategoryModalOpen(true)}
+          onOpenSuppliers={() => setIsSupplierModalOpen(true)}
+          products={products}
+          suppliers={suppliers}
+          categories={categories}
+          activities={activities}
+        />
+
         <div className="space-y-6">
           
           <div className="flex justify-between items-start">
@@ -287,15 +299,24 @@ function App() {
               <p className="text-slate-500 dark:text-slate-400">Overview of your current stock and value.</p>
             </div>
             
-            <div className="flex gap-4">
+            <div className="flex gap-3">
               <ThemeToggle />
               
+              {/* 4. NEW SETTINGS BUTTON */}
+              <button 
+                onClick={() => setIsSettingsOpen(true)}
+                className="p-2 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+                title="Settings & Backup"
+              >
+                <Settings size={20} />
+              </button>
+
               <button 
                 onClick={handleLogout}
-                className="flex items-center gap-2 text-slate-500 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400 transition-colors px-3 py-2 rounded-lg hover:bg-red-50 dark:hover:bg-slate-800"
+                className="p-2 rounded-lg bg-slate-100 dark:bg-slate-700 text-red-500 hover:bg-red-50 dark:hover:bg-slate-600 transition-colors"
+                title="Logout"
               >
-                <LogOut size={18} />
-                <span className="font-medium">Logout</span>
+                <LogOut size={20} />
               </button>
             </div>
           </div>
@@ -349,36 +370,22 @@ function App() {
               </div>
 
               <div className="flex gap-3 w-full md:w-auto">
-                {/* 6. NEW BUTTONS SECTION */}
-                <button
-                  onClick={() => setIsSupplierModalOpen(true)}
-                  className="flex-1 md:flex-none border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 px-3 py-2.5 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2"
-                >
-                  <Truck size={18} />
-                </button>
-
-                <button
-                  onClick={() => setIsCategoryModalOpen(true)}
-                  className="flex-1 md:flex-none border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 px-3 py-2.5 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2"
-                  title="Manage Categories"
-                >
-                  <Layers size={18} />
-                </button>
-
+                {/* 5. CLEANER BUTTON GROUP */}
                 <button
                   onClick={() => setIsLabelModalOpen(true)}
-                  className="flex-1 md:flex-none border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 px-3 py-2.5 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2"
+                  className="flex-1 md:flex-none border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 px-4 py-2.5 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2"
                 >
                   <QrCode size={18} />
+                  <span className="hidden md:inline">Labels</span>
                 </button>
 
                 <button onClick={handleExport} className="flex-1 md:flex-none border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 px-4 py-2.5 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2">
                   <Download size={18} />
-                  Export
+                  <span className="hidden md:inline">CSV</span>
                 </button>
                 
                 <button onClick={handleAddClick} className="flex-1 md:flex-none bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2">
-                  + Add Product
+                  <Plus size={18} /> Add Product
                 </button>
               </div>
           </div>
@@ -398,7 +405,7 @@ function App() {
               onSave={handleSaveProduct}
               productToEdit={productToEdit}
               suppliers={suppliers}
-              categories={categories} // 7. Pass Categories
+              categories={categories}
             />
           )}
         </div>
